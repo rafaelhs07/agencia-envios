@@ -91,7 +91,7 @@ Abre http://localhost:3000 e ingresa con el usuario creado. Si cambias .env.loca
 7. Tras inspeccionarlos, cambia los paquetes a LISTO_RETIRO.
 8. Crea una cuenta para el cliente y elige el paquete a facturar, o registra un concepto independiente.
 9. Abre caja si vas a recibir efectivo. Registra uno o varios abonos; el saldo se actualiza en la misma operación.
-10. Crea la entrega y selecciona sus paquetes. Si el crédito está desactivado, deben estar pagados para salir a reparto o entregarse.
+10. Crea la entrega y selecciona sus paquetes. Todos los paquetes deben estar facturados. Si el crédito está desactivado, deben estar pagados; si está activado, el saldo del cliente debe estar dentro de su límite de crédito.
 11. Al terminar, cierra la caja con el efectivo contado. El sistema calcula lo esperado y la diferencia.
 
 Los pagos con métodos distintos se registran como abonos separados a la misma cuenta. Los registros financieros se conservan: esta versión no incluye anulación/reversión de cobros ni gastos. No edites importes manualmente en las tablas.

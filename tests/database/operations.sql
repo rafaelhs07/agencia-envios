@@ -66,8 +66,7 @@ select public.save_financial_record('caja','{"closing_amount":39}','60000000-000
 select public.test_assert((select expected_amount=40 and closing_amount=39 and difference=-1 and status='CERRADA' from public.cash_sessions where id='60000000-0000-4000-8000-000000000001'),'cierre con saldo y diferencia');
 select public.test_reject($q$select public.save_financial_record('cobros','{"invoice_id":"50000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","amount":1,"method":"EFECTIVO"}')$q$,'efectivo sin caja abierta');
 select public.test_assert((select paid_amount=25 from public.invoices where id='50000000-0000-4000-8000-000000000001'),'fallo de caja revierte abono');
-select public.save_financial_record('cobros','{"request_id":"70000000-0000-4000-8000-000000000002","invoice_id":"50000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","amount":47,"method":"TRANSFERENCIA"}');
-select public.test_assert((select paid_amount=72 and status='PAGADO' from public.invoices where id='50000000-0000-4000-8000-000000000001'),'pago completo');
+
 select public.test_assert((select count(*)=2 from public.cash_movements),'solo efectivo en movimientos de caja');
 
 select public.save_consolidation('{"request_id":"80000000-0000-4000-8000-000000000001","code":"CON-A","transport_type":"AEREO","status":"ABIERTA","origin":"Miami","destination":"Managua","package_ids":["40000000-0000-4000-8000-000000000001"]}');
@@ -80,7 +79,16 @@ insert into public.shipments(id,organization_id,consolidation_id,transport_type,
 select public.receive_packages('{"request_id":"82000000-0000-4000-8000-000000000001","code":"RECEP-A","branch_id":"20000000-0000-4000-8000-000000000001","shipment_id":"81000000-0000-4000-8000-000000000001","package_ids":["40000000-0000-4000-8000-000000000001"],"shelf_location":"A-01","damaged_packages":0}');
 select public.test_assert((select status='RECIBIDO_NICARAGUA' and shelf_location='A-01' from public.packages where internal_code='PKG-A'),'recepción actualiza ubicación');
 select public.save_package('{"customer_id":"30000000-0000-4000-8000-000000000001","internal_code":"PKG-A","tracking_number":"TRACK-A","description":"Prueba","transport_type":"AEREO","status":"LISTO_RETIRO","weight_lb":10,"volume_ft3":1,"declared_value":100,"assigned_branch_id":"20000000-0000-4000-8000-000000000001","shelf_location":"A-01"}','40000000-0000-4000-8000-000000000001');
-select public.save_delivery('{"request_id":"83000000-0000-4000-8000-000000000001","customer_id":"30000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","code":"DEL-A","delivery_type":"RETIRO_SUCURSAL","status":"ENTREGADA","recipient_name":"Cliente A","package_ids":["40000000-0000-4000-8000-000000000001"]}');
+select public.test_reject($q$select public.save_delivery('{"customer_id":"30000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","code":"DEL-A","delivery_type":"RETIRO_SUCURSAL","status":"ENTREGADA","recipient_name":"Cliente A","package_ids":["40000000-0000-4000-8000-000000000001"]}')$q$,'no entregar deuda sin crédito');
+update public.organization_settings set credit_enabled=true where organization_id='10000000-0000-4000-8000-000000000001';
+update public.customers set credit_limit=30 where id='30000000-0000-4000-8000-000000000001';
+select public.test_reject($q$select public.save_delivery('{"customer_id":"30000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","code":"DEL-A","delivery_type":"RETIRO_SUCURSAL","status":"ENTREGADA","recipient_name":"Cliente A","package_ids":["40000000-0000-4000-8000-000000000001"]}')$q$,'respetar límite de crédito');
+update public.customers set credit_limit=100 where id='30000000-0000-4000-8000-000000000001';
+select public.save_delivery('{"request_id":"83000000-0000-4000-8000-000000000001","customer_id":"30000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","code":"DEL-A","delivery_type":"RETIRO_SUCURSAL","status":"EN_RUTA","recipient_name":"Cliente A","package_ids":["40000000-0000-4000-8000-000000000001"]}');
+select public.test_assert((select status='EN_REPARTO' from public.packages where internal_code='PKG-A'),'crédito autorizado permite reparto');
+select public.save_financial_record('cobros','{"request_id":"70000000-0000-4000-8000-000000000002","invoice_id":"50000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","amount":47,"method":"TRANSFERENCIA"}');
+select public.test_assert((select paid_amount=72 and status='PAGADO' from public.invoices where id='50000000-0000-4000-8000-000000000001'),'pago completo');
+select public.save_delivery('{"customer_id":"30000000-0000-4000-8000-000000000001","branch_id":"20000000-0000-4000-8000-000000000001","code":"DEL-A","delivery_type":"RETIRO_SUCURSAL","status":"ENTREGADA","recipient_name":"Cliente A","package_ids":["40000000-0000-4000-8000-000000000001"]}','83000000-0000-4000-8000-000000000001');
 select public.test_assert((select status='ENTREGADO' and delivered_at is not null from public.packages where internal_code='PKG-A'),'entrega actualiza estado y fecha');
 select public.test_assert((public.get_agency_dashboard()->>'delivered')::integer=1,'dashboard usa datos reales');
 select public.test_assert((select count(*)>=6 from public.package_events),'historial de estados preservado');

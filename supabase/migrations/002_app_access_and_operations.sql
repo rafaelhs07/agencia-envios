@@ -258,7 +258,7 @@ begin
       if not found then raise exception 'Abre la caja de la sucursal para recibir efectivo.'; end if;
     end if;
     insert into public.payments(id,organization_id,invoice_id,customer_id,branch_id,receipt_number,amount,method,reference,received_by,notes)
-      values(v_record_id,v_org,v_invoice.id,v_invoice.customer_id,v_branch,'REC-'||upper(substr(v_record_id::text,1,8)),v_amount,v_method,nullif(p_data->>'reference',''),v_actor,p_data->>'notes');
+      values(v_record_id,v_org,v_invoice.id,v_invoice.customer_id,v_branch,'REC-'||upper(replace(v_record_id::text,'-','')),v_amount,v_method,nullif(p_data->>'reference',''),v_actor,p_data->>'notes');
     update public.invoices set paid_amount = paid_amount + v_amount,
       status = case when paid_amount + v_amount >= total then 'PAGADO'::public.payment_status else 'PARCIAL'::public.payment_status end
       where id = v_invoice.id;
@@ -285,7 +285,7 @@ begin
       raise exception 'Revisa el concepto, subtotal, descuento y cargos de la cuenta.';
     end if;
     insert into public.invoices(id,organization_id,customer_id,branch_id,invoice_number,subtotal,discount,tax,due_date,notes,created_by)
-      values(v_record_id,v_org,v_customer,v_branch,'FAC-'||upper(substr(v_record_id::text,1,8)),v_subtotal,v_discount,v_tax,nullif(p_data->>'due_date','')::date,p_data->>'notes',v_actor);
+      values(v_record_id,v_org,v_customer,v_branch,'FAC-'||upper(replace(v_record_id::text,'-','')),v_subtotal,v_discount,v_tax,nullif(p_data->>'due_date','')::date,p_data->>'notes',v_actor);
     insert into public.invoice_items(invoice_id,package_id,description,quantity,unit_price)
       values(v_record_id,v_package.id,v_description,1,v_subtotal);
 
@@ -446,11 +446,26 @@ begin
     raise exception 'Selecciona paquetes del cliente listos para retirar o en reparto.';
   end if;
   if exists(select 1 from public.delivery_packages where package_id = any(v_ids) and delivery_id <> v_id) then raise exception 'Un paquete ya pertenece a otra entrega.'; end if;
-  if v_status in ('EN_RUTA','ENTREGADA') and not coalesce((select credit_enabled from public.organization_settings where organization_id = v_org),false)
-    and exists(select 1 from unnest(v_ids) pkg(id) where not exists (
+  if v_status in ('EN_RUTA','ENTREGADA') then
+    if exists(select 1 from unnest(v_ids) pkg(id) where not exists (
+      select 1 from public.invoice_items it join public.invoices i on i.id = it.invoice_id
+      where it.package_id = pkg.id and i.status <> 'ANULADO'
+    )) then raise exception 'Crea una cuenta para cada paquete antes de entregarlo.'; end if;
+    if exists(select 1 from unnest(v_ids) pkg(id) where not exists (
       select 1 from public.invoice_items it join public.invoices i on i.id = it.invoice_id
       where it.package_id = pkg.id and i.status = 'PAGADO'
-    )) then raise exception 'El crédito está desactivado: cobra los paquetes antes de entregarlos.'; end if;
+    )) then
+      if not coalesce((select credit_enabled from public.organization_settings where organization_id = v_org),false) then
+        raise exception 'El crédito está desactivado: cobra los paquetes antes de entregarlos.';
+      end if;
+      perform 1 from public.customers where id = v_customer and organization_id = v_org for update;
+      if coalesce((select credit_limit from public.customers where id = v_customer),0) <= 0 or
+        (select coalesce(sum(total-paid_amount),0) from public.invoices where customer_id = v_customer and organization_id = v_org and status <> 'ANULADO')
+        > (select credit_limit from public.customers where id = v_customer) then
+        raise exception 'El saldo pendiente supera el límite de crédito autorizado para el cliente.';
+      end if;
+    end if;
+  end if;
   select array_agg(package_id) into v_old_ids from public.delivery_packages where delivery_id = v_id;
   if p_id is null then
     insert into public.deliveries(id,organization_id,customer_id,code,delivery_type)
@@ -508,7 +523,7 @@ end $$;
 
 
 create or replace function public.save_package(p_data jsonb,p_id uuid default null) returns uuid
-language plpgsql security definer set search_path = public as $
+language plpgsql security definer set search_path = public as $$
 declare
   v_org uuid := public.require_staff(array['SUPER_ADMIN','ADMIN','OPERACIONES','BODEGA_MIAMI','RECEPCION']);
   v_id uuid := coalesce(p_id,nullif(p_data->>'request_id','')::uuid,gen_random_uuid());
@@ -556,10 +571,10 @@ begin
       shelf_location = p_data->>'shelf_location',notes = p_data->>'notes' where id = v_id;
   end if;
   return v_id;
-end $;
+end $$;
 
 create or replace function public.guard_organization_currency() returns trigger
-language plpgsql security definer set search_path = public as $
+language plpgsql security definer set search_path = public as $$
 begin
   if new.currency is distinct from old.currency and (
     exists(select 1 from public.packages where organization_id = old.id) or
@@ -569,17 +584,17 @@ begin
     exists(select 1 from public.cash_sessions where organization_id = old.id)
   ) then raise exception 'La moneda no puede cambiar después de registrar operaciones.'; end if;
   return new;
-end $;
+end $$;
 create trigger organization_currency before update on public.organizations for each row execute function public.guard_organization_currency();
 
 create or replace function public.guard_shipment_transport() returns trigger
-language plpgsql security definer set search_path = public as $
+language plpgsql security definer set search_path = public as $$
 begin
   if new.consolidation_id is not null and not exists(select 1 from public.consolidations where id = new.consolidation_id and transport_type = new.transport_type) then
     raise exception 'El embarque y la consolidación deben usar el mismo transporte.';
   end if;
   return new;
-end $;
+end $$;
 create trigger shipment_transport before insert or update on public.shipments for each row execute function public.guard_shipment_transport();
 create unique index one_shipment_per_consolidation on public.shipments(consolidation_id) where consolidation_id is not null;
 

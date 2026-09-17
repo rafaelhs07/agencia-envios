@@ -40,7 +40,7 @@ export const modules: Record<string, Module> = {
   clientes: {
     table: "customers", roles: [...adminRoles, "OPERACIONES", "RECEPCION", "CAJA"], search: ["locker_code", "first_name", "last_name", "phone", "email"],
     columns: [col("locker_code", "Casillero"), col("first_name", "Nombres"), col("last_name", "Apellidos"), col("phone", "Teléfono"), col("email", "Correo"), col("active", "Activo")],
-    fields: [text("locker_code", "Casillero", true), text("first_name", "Nombres", true), text("last_name", "Apellidos", true), text("phone", "Teléfono", true), text("whatsapp", "WhatsApp"), { key: "email", label: "Correo", type: "email" }, text("identification", "Identificación"), text("address", "Dirección"), { ...branch, required: false }, number("credit_limit", "Límite de crédito"), note, active]
+    fields: [text("locker_code", "Casillero", true), text("first_name", "Nombres", true), text("last_name", "Apellidos", true), text("phone", "Teléfono", true), text("whatsapp", "WhatsApp"), { key: "email", label: "Correo", type: "email" }, text("identification", "Identificación"), text("address", "Dirección"), { ...branch, required: false }, number("credit_limit", "Límite de crédito (0 = sin crédito)"), note, active]
   },
   paquetes: {
     table: "packages", roles: operationRoles, rpc: "save_package", search: ["tracking_number", "internal_code", "description", "store"],
