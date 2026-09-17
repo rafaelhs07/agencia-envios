@@ -1,0 +1,51 @@
+name: Verificar aplicación
+on:
+  push:
+    branches: [main, codex/conectar-supabase]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: nexocargo_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: test_password
+      PGDATABASE: nexocargo_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar Auth de prueba
+        run: psql -v ON_ERROR_STOP=1 -f tests/database/bootstrap.sql
+      - name: Aplicar migraciones
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/001_initial_schema.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/002_app_access_and_operations.sql
+      - name: Verificar aislamiento y operaciones
+        run: psql -v ON_ERROR_STOP=1 -f tests/database/operations.sql
