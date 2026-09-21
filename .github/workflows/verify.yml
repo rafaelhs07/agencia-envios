@@ -1,7 +1,7 @@
 name: Verificar aplicación
 on:
   push:
-    branches: [main, codex/conectar-supabase]
+    branches: [main, 'codex/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -45,7 +45,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/database/bootstrap.sql
       - name: Aplicar migraciones
         run: |
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/001_initial_schema.sql
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/002_app_access_and_operations.sql
+          for migration in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Verificar permisos de la API
+        run: psql -v ON_ERROR_STOP=1 -f tests/database/permissions.sql
       - name: Verificar aislamiento y operaciones
         run: psql -v ON_ERROR_STOP=1 -f tests/database/operations.sql

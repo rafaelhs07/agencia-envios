@@ -17,6 +17,12 @@ La aplicación utiliza Supabase Auth y PostgreSQL. Los registros se consultan y 
 - Búsqueda, paginación y reportes CSV con filtro de fechas.
 - Separación por agencia y permisos de operación mediante RLS.
 
+## Proyecto Supabase configurado
+
+El proyecto de trabajo es [agencia-envios](https://supabase.com/dashboard/project/jxgnlncoziaabdhykwpd), dentro de **rafasteel's Org**. Sus tablas, funciones y permisos ya están instalados; no vuelvas a ejecutar las migraciones en ese proyecto. Consulta el [registro de instalación](docs/supabase-instalacion.md).
+
+Para comenzar en tu computadora, actualiza el repositorio, prepara el entorno del paso 3 y crea el administrador del paso 4. El acceso a la cuenta de Supabase no crea automáticamente un usuario de la aplicación.
+
 ## Instalacion
 
 Requiere Node.js 22 LTS y un proyecto Supabase.
@@ -41,23 +47,24 @@ npm ci
 
 Si descargaste un ZIP, clona el repositorio en una carpeta nueva para disponer de Git. Conserva tu .env.local y cópialo a la carpeta nueva.
 
-### 2. Preparar la base de datos
+### 2. Preparar una base de datos nueva
 
-En Supabase > SQL Editor ejecuta, en orden:
+Omite este paso para el proyecto indicado arriba. Para instalar en otro proyecto vacío, ejecuta en Supabase > SQL Editor, en orden:
 
 1. supabase/migrations/001_initial_schema.sql, solo si aún no lo ejecutaste.
 2. supabase/migrations/002_app_access_and_operations.sql.
+3. supabase/migrations/20260921210806_harden_database_access.sql.
 
 Las migraciones se ejecutan una sola vez por base de datos. La 002 reemplaza las políticas iniciales y agrega funciones y validaciones. Ejecutarla no conecta automáticamente las credenciales de tu computadora.
 
 ### 3. Configurar el entorno
 
 ~~~cmd
-copy .env.example .env.local
+if not exist .env.local copy .env.example .env.local
 notepad .env.local
 ~~~
 
-Completa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY. También se admite NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY en lugar de la clave anon.
+El archivo .env.example ya contiene la URL y la clave publicable de agencia-envios. Si .env.local ya existía, actualiza NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY con esos valores. Conserva tus demás variables. También se admite NEXT_PUBLIC_SUPABASE_ANON_KEY para proyectos que usan la clave pública antigua.
 
 SUPABASE_SERVICE_ROLE_KEY solo es necesaria para que un administrador cree nuevos usuarios desde /usuarios. Es una clave privada de servidor: nunca debe llevar NEXT_PUBLIC_ ni publicarse en GitHub. .env.local está excluido de Git.
 
@@ -115,7 +122,7 @@ npm run typecheck
 npm run build
 ~~~
 
-GitHub Actions ejecuta TypeScript, compilación y pruebas de PostgreSQL sobre una base de prueba. Las pruebas verifican aislamiento de agencias, roles, tarifas, abonos, reintentos, sobrepagos, caja y logística.
+GitHub Actions ejecuta TypeScript, compilación y pruebas de PostgreSQL sobre una base de prueba. Las pruebas verifican aislamiento de agencias, roles, tarifas, abonos, reintentos, sobrepagos, caja, logística y permisos de tablas y funciones. El workflow aplica todos los archivos de supabase/migrations en orden.
 
 La base de prueba simula auth.users y auth.uid; no reemplaza una prueba de inicio de sesión real en tu proyecto Supabase.
 
