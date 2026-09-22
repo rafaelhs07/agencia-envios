@@ -21,7 +21,7 @@ La aplicación utiliza Supabase Auth y PostgreSQL. Los registros se consultan y 
 
 El proyecto de trabajo es [agencia-envios](https://supabase.com/dashboard/project/jxgnlncoziaabdhykwpd), dentro de **rafasteel's Org**. Sus tablas, funciones y permisos ya están instalados; no vuelvas a ejecutar las migraciones en ese proyecto. Consulta el [registro de instalación](docs/supabase-instalacion.md).
 
-Para comenzar en tu computadora, actualiza el repositorio, prepara el entorno del paso 3 y crea el administrador del paso 4. El acceso a la cuenta de Supabase no crea automáticamente un usuario de la aplicación.
+El administrador inicial, la agencia y la sucursal principal ya están activos en este proyecto. Para usarlo en tu computadora, actualiza el repositorio, prepara el entorno del paso 3 e inicia sesión con la cuenta creada. El paso 4 corresponde a instalaciones nuevas.
 
 ## Instalacion
 
@@ -70,7 +70,9 @@ SUPABASE_SERVICE_ROLE_KEY solo es necesaria para que un administrador cree nuevo
 
 Obtén la URL y la clave pública desde Connect o Settings > API Keys de tu proyecto Supabase. La clave service_role se encuentra entre las claves privadas/legacy. No compartas contraseñas ni claves privadas en el chat.
 
-### 4. Crear el primer administrador
+### 4. Crear el primer administrador (solo en instalaciones nuevas)
+
+En el proyecto agencia-envios indicado arriba, este paso ya está completado.
 
 1. En Supabase, abre Authentication > Users > Add user > Create new user.
 2. Escribe tu correo y contraseña y activa Auto Confirm User.

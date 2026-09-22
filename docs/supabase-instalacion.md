@@ -1,6 +1,6 @@
 # Instalación de Supabase — agencia-envios
 
-Verificada el 21 de septiembre de 2026.
+Instalación verificada el 21 de septiembre de 2026. Acceso inicial comprobado el 22 de septiembre de 2026.
 
 - Organización: **rafasteel's Org** (`tqczrkmikhuxvbcjwqwo`).
 - Proyecto: [agencia-envios](https://supabase.com/dashboard/project/jxgnlncoziaabdhykwpd) (`jxgnlncoziaabdhykwpd`).
@@ -15,6 +15,8 @@ Verificada el 21 de septiembre de 2026.
 | `001_initial_schema.sql` | Ejecutado previamente desde SQL Editor; esquema comprobado antes de continuar. |
 | `002_app_access_and_operations.sql` | Aplicada; versión remota `20260921210410`. |
 | `20260921210806_harden_database_access.sql` | Aplicada; versión remota `20260921211011`. |
+
+La preparación inicial se ejecutó con `supabase/setup_admin.sql` y los parámetros del administrador elegido. Está registrada en Supabase como `bootstrap_initial_agency_admin`, versión `20260921212452`. Este paso crea datos de la agencia y no debe repetirse para el acceso ya configurado.
 
 No ejecutar de nuevo estos archivos en este proyecto. Las dos primeras migraciones se conservan sin cambios. La migración adicional se creó con Supabase CLI 2.117.0.
 
@@ -31,7 +33,9 @@ Los nombres de versión del historial remoto y los archivos iniciales son distin
 - Índices para las relaciones y las consultas de agencia/caja; políticas de lectura unificadas en clientes y perfiles.
 - GitHub Actions aplica las migraciones en PostgreSQL 17 y verifica los permisos y las operaciones, además de TypeScript y la compilación.
 
-La prueba de escritura transaccional por el conector SQL no pudo ejecutarse: la consulta se abrió en modo de solo lectura. Las pruebas operativas se ejecutan en la base aislada de CI. No se ha probado todavía un inicio de sesión HTTP real.
+La prueba de escritura transaccional por el conector SQL no pudo ejecutarse: la consulta se abrió en modo de solo lectura. Las pruebas operativas se ejecutan en la base aislada de CI.
+
+El 22 de septiembre se verificaron en la base real el correo confirmado, el perfil ADMIN activo, la agencia activa, la sucursal principal activa y la configuración inicial. El usuario confirmó que pudo iniciar sesión; esa comprobación de inicio de sesión fue realizada por el usuario.
 
 ## Avisos de Supabase revisados
 
@@ -41,9 +45,9 @@ Quedan 10 avisos de [funciones SECURITY DEFINER accesibles a usuarios autenticad
 
 También aparecen [índices sin uso registrado](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index), algo esperable antes de cargar datos. Se conservan los índices de las relaciones y consultas previstas.
 
-## Activar el primer acceso
+## Usar el acceso inicial
 
-Al terminar la instalación no hay usuarios en Authentication ni perfiles, agencias o datos operativos cargados.
+El primer acceso ya está preparado para **Agencia de envíos**, con la **Sucursal principal** y el rol **ADMIN**. En este proyecto omite los pasos 1 y 2 y usa tu cuenta existente. Esos pasos se conservan para instalaciones nuevas.
 
 1. Abre [Authentication > Users](https://supabase.com/dashboard/project/jxgnlncoziaabdhykwpd/auth/users) y crea tu usuario, con tu correo, contraseña y Auto Confirm User.
 2. Ejecuta `supabase/setup_admin.sql` en SQL Editor, cambiando `v_email` por ese correo, `v_agency` por el nombre de tu agencia y `v_slug` por un identificador sin espacios.
